@@ -1,0 +1,11 @@
+RISCV SB.FF+fencei+fencei
+(* adapted from Brendan's DIC.SB+fencei.litmus *)
+Variant=self
+{ 0:t0=instr:"li s0, 1"; 0:a1=P1:mod1; 0:s0=0;
+  1:t0=instr:"li s0, 1"; 1:a1=P0:mod0; 1:s0=0; }
+P0           | P1           ;
+sw t0,0(a1)  | sw t0,0(a1)  ;
+fence.i      | fence.i      ;
+mod0:        | mod1:        ;
+nop          | nop          ;
+exists (0:s0=0 /\ 1:s0=0)

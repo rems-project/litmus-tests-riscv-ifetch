@@ -1,0 +1,9 @@
+RISCV SB.RF+fencei+po
+Variant=self
+{ 0:t0=instr:"li s0, 2"; 0:a1=P1:mod; 0:a2=x;
+  1:a2=x; 1:t1=1; 1:s0=0; }
+P0           | P1           ;
+sw t0,0(a1)  | sw t1,0(a2)  ;
+fence.i      | mod:         ;
+lw s1,(a2)   | li s0, 1     ;
+exists (0:s1=0 /\ 1:s0=1)

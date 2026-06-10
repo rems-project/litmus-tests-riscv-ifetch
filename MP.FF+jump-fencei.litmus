@@ -1,0 +1,18 @@
+RISCV MP.FF+jump-fencei
+(* adapted from Brendan's IDC.miniJit03+fencei.litmus *)
+Variant=self
+{ 0:t0=instr:"li s0, 3"; 0:a1=P1:L1;
+  0:t1=instr:"j Ltarget"; 0:a2=P1:L2;
+  1:s0=0; }
+P0           | P1           ;
+sw t0,0(a1)  | L2:          ;
+fence w,w    | j L0         ;
+sw t1,0(a2)  | L0:          ;
+             | li s0, 1     ;
+             | j Lend       ;
+             | Ltarget:     ;
+             | fence.i      ;
+             | L1:          ;
+             | li s0, 2     ;
+             | Lend:        ;
+exists (1:s0=2)

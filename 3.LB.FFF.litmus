@@ -1,0 +1,10 @@
+RISCV 3.LB.FFF
+Variant=self
+{ 0:t0=instr:"li s0, 2"; 0:a1=P1:mod1; 0:s0=0;
+  1:t0=instr:"li s0, 2"; 1:a1=P2:mod2; 1:s0=0;
+  2:t0=instr:"li s0, 2"; 2:a1=P0:mod0; 2:s0=0; }
+P0           | P1           | P2           ;
+mod0:        | mod1:        | mod2:        ;
+li s0, 1     | li s0, 1     | li s0, 1     ;
+sw t0,0(a1)  | sw t0,0(a1)  | sw t0,0(a1)  ;
+exists (0:s0=2 /\ 1:s0=2 /\ 2:s0=2)

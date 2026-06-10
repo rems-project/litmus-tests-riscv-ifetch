@@ -1,0 +1,15 @@
+RISCV WRC.F.FF
+Variant=self
+{ 0:t0=instr:"li t6, 2"; 0:a1=P1:mod1;
+  1:t0=instr:"li t6, 2"; 1:a1=P2:mod2;
+  2:a1=P1:mod1; }
+P0           | P1           | P2           ;
+sw t0,0(a1)  | jal mod1     | mod2:        ;
+             | mv s0, t6    | li t6, 1     ;
+             | sw t0,0(a1)  | mv s0, t6    ;
+             | j end1       | jalr a1      ;
+             | mod1:        | mv s1, t6    ;
+             | li t6, 1     |              ;
+             | jr ra        |              ;
+             | end1:        |              ;
+exists (1:s0=2 /\ 2:s0=2 /\ 2:s1=1)

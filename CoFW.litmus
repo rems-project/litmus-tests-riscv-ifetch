@@ -1,0 +1,9 @@
+RISCV CoFW
+(* adapted from Brendan's DIC.nobackwards.litmus *)
+Variant=self
+{ 0:t0=instr:"nop"; 0:a1=P0:mod; 0:t1=0; }
+P0           ;
+mod:         ;
+li t1, 1     ;
+sw t0,0(a1)  ;
+exists 0:t1=0

@@ -1,0 +1,9 @@
+RISCV SM+fence.rw.rw
+Variant=self
+{ 0:t0=instr:"nop"; 0:a1=P0:mod; }
+P0           ;
+sw t0,0(a1)  ;
+fence rw,rw  ;
+mod:         ;
+li s0, 1     ;
+exists 0:s0=1

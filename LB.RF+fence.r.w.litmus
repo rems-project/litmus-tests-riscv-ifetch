@@ -1,0 +1,10 @@
+RISCV LB.RF+fence.r.w
+(* adapted from Brendan's DIC.LB.RF.litmus *)
+Variant=self
+{ 0:t0=instr:"li s0, 1"; 0:a1=x; 0:a2=P1:mod;
+  1:a1=x; 1:t1=1; 1:s0=0; }
+P0           | P1           ;
+lw s0,(a1)   | mod:         ;
+fence r,w    | nop          ;
+sw t0,0(a2)  | sw t1,0(a1)  ;
+exists (0:s0=1 /\ 1:s0=1)

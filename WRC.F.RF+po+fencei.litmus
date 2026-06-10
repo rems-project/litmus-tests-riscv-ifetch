@@ -1,0 +1,14 @@
+RISCV WRC.F.RF+po+fencei
+(* adapted from Brendan's DIC.WRC-inst.litmus *)
+Variant=self
+{ 0:t0=instr:"li s0, 1"; 0:a1=P0:mod;
+  1:a1=P0:mod; 1:a2=x; 1:t1=1; 1:s0=0;
+  2:a1=P0:mod; 2:a2=x; 2:s0=0; }
+P0           | P1          | P2          ;
+sw t0,0(a1)  | jalr a1     | lw s2,(a2)  ;
+j end        | sw t1,(a2)  | fence.i     ;
+mod:         |             | jalr a1     ;
+nop          |             |             ;
+jr ra        |             |             ;
+end:         |             |             ;
+exists (1:s0=1 /\ 2:s2=1 /\ 2:s0=0)

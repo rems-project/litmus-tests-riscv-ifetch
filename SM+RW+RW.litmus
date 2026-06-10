@@ -1,0 +1,12 @@
+RISCV SM+RW+RW
+Variant=self
+{ 0:t0=instr:"li s0, 2"; 0:a1=P0:mod; 0:a2=x;
+  1:t1=instr:"li s0, 3"; 1:a1=P0:mod;
+  2:a1=P0:mod; 2:a2=x; 2:t3=1; }
+P0           | P1           | P2               ;
+sw t0,0(a1)  | lw s2,0(a1)  | lw s3,0(a1)      ;
+lw s1,(a2)   | sw t1,0(a1)  | xor t2,s3,s3     ;
+fence.i      |              | add a3,a2,t2     ;
+mod:         |              | sw t3,0(a3)      ;
+li s0, 1     |              |                  ;
+exists (0:s1=1 /\ 1:s2=instr:"li s0, 2" /\ 2:s3=instr:"li s0, 3" /\ 0:s0=2)

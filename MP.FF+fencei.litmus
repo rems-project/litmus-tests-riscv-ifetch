@@ -1,0 +1,10 @@
+RISCV MP.FF+fencei
+Variant=self
+{ 0:t0=instr:"nop"; 0:a1=P1:mod0; 0:a2=P1:mod1; }
+P0           | P1           ;
+sw t0,0(a2)  | mod0:        ;
+fence w,w    | li s0, 1     ;
+sw t0,0(a1)  | fence.i      ;
+             | mod1:        ;
+             | li s1, 1     ;
+exists (1:s0=0 /\ 1:s1=1)

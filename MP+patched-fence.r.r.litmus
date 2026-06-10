@@ -1,0 +1,16 @@
+RISCV MP+patched-fence.r.r
+Variant=self
+{
+ 0:t0 = instr:"fence r,r";
+ 0:a1 = P1:Lmod;
+ 0:a2 = x; 0:t1 = 1;
+ 0:a3 = y; 0:t2 = 1;
+ 1:a1 = y; 1:a2 = x;
+}
+P0           | P1           ;
+sw t1,0(a2)  | lw s0,(a1)   ;
+fence w,w    | Lmod:        ;
+sw t0,0(a1)  | nop          ;
+fence w,w    | lw s1,(a2)   ;
+sw t2,0(a3)  |              ;
+exists (1:s0=1 /\ 1:s1=0)

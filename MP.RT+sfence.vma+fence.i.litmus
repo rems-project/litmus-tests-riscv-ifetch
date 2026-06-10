@@ -1,0 +1,16 @@
+RISCV MP.RT+sfence.vma+fence.i
+Variant=self,vmsa
+(* sketch, needs virtual memory support *)
+{
+ TTD(va_data) = (oa:PA(pa_old), valid:1);
+ 0:t_pte = (oa:PA(pa_new), valid:1);
+ 0:a_pte = PTE(va_data);
+ 0:a_flg = flag;       0:t_flg = 1;
+ 1:a_flg = flag;
+ 1:a_data = va_data;
+}
+ P0                | P1                  ;
+ sw t_pte,0(a_pte) | lw s_flg,(a_flg)    ;
+ sfence.vma        | fence.i             ;
+ sw t_flg,0(a_flg) | lw s_data,(a_data)  ;
+exists (1:s_flg = 1 /\ 1:s_data = 1)

@@ -1,0 +1,11 @@
+RISCV SB+fetch-addr+fence.rw.rw
+(* adapted from Brendan's DIC.emailQ2.litmus *)
+Variant=self
+{ 0:t0=instr:"mv a1, a2"; 0:a0=P0:mod; 0:a1=y; 0:a2=x;
+  1:a0=P0:mod; 1:a1=x; 1:t1=1; }
+P0           | P1           ;
+sw t0,0(a0)  | sw t1,0(a1)  ;
+mod:         | fence rw,rw  ;
+nop          | lwu s1,0(a0) ;
+lwu s0,0(a1) |              ;
+exists (0:a1=x /\ 0:s0=0 /\ 1:s1=instr:"nop")

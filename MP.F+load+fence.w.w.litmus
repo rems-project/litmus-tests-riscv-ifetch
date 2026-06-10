@@ -1,0 +1,10 @@
+RISCV MP.F+load+fence.w.w
+(* adapted from Brendan's DIC.fetchtoexecute.litmus *)
+Variant=self
+{ 0:t0=instr:"lw s0, 0(a2)"; 0:a1=P1:mod; 0:a2=z; 0:t1=1;
+  1:a2=z; 1:s0=0; }
+P0           | P1           ;
+sw t1,0(a2)  | mod:         ;
+fence w,w    | li s0, 2     ;
+sw t0,0(a1)  |              ;
+exists (1:s0=0)

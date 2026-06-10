@@ -1,0 +1,11 @@
+RISCV ISA2.F+fence.w.w+fence.r.w+fencei
+Variant=self
+{ 0:t0=instr:"li s2, 5"; 0:a1=P2:mod; 0:a2=y; 0:t1=1;
+  1:a1=y; 1:a2=z; 1:t1=1;
+  2:a1=z; }
+P0           | P1           | P2           ;
+sw t0,0(a1)  | lw s0,(a1)   | lw s1,(a1)   ;
+fence w,w    | fence r,w    | fence.i      ;
+sw t1,0(a2)  | sw t1,0(a2)  | mod:         ;
+             |              | nop          ;
+exists (1:s0=1 /\ 2:s1=1 /\ 2:s2=0)

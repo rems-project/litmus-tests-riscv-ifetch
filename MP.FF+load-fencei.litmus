@@ -1,0 +1,13 @@
+RISCV MP.FF+load-fencei
+(* adapted from Brendan's IDC.MP.FF+load-fencei.litmus *)
+Variant=self
+{ 0:t0=instr:"lw s0, 0(a4)"; 0:t1=instr:"nop";
+  0:a1=P1:mod0; 0:a2=P1:mod1;
+  1:a4=z; z=2; }
+ P0          | P1          ;
+ sw t1,0(a2) | mod0:       ;
+ fence w,w   | li s0, 1    ;
+ sw t0,0(a1) | fence.i     ;
+             | mod1:       ;
+             | li s1, 1    ;
+exists (1:s0=2 /\ 1:s1=1)

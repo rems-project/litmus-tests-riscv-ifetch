@@ -1,0 +1,15 @@
+RISCV WRC.F.RR+po+fence.r.r
+Variant=self
+{ 0:t0=instr:"li t6, 2"; 0:a1=P1:mod;
+  1:a2=x; 1:t1=1;
+  2:a2=x; 2:a3=P1:mod; }
+P0           | P1           | P2           ;
+sw t0,0(a1)  | jal mod      | lw s1,(a2)   ;
+             | mv s0, t6    | fence r,r    ;
+             | sw t1,0(a2)  | lw s2,0(a3)  ;
+             | j end1       |              ;
+             | mod:         |              ;
+             | li t6, 1     |              ;
+             | jr ra        |              ;
+             | end1:        |              ;
+exists (1:s0=2 /\ 2:s1=1 /\ 2:s2=instr:"li t6, 1")

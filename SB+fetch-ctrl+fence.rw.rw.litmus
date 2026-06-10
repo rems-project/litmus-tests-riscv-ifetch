@@ -1,0 +1,13 @@
+RISCV SB+fetch-ctrl+fence.rw.rw
+(* adapted from Brendan's DIC.emailQ3.litmus *)
+Variant=self
+{ 0:t0=instr:"j next"; 0:a0=P0:mod; 0:a1=x; 0:s0=99;
+  1:a0=P0:mod; 1:a1=x; 1:t1=1; }
+P0           | P1           ;
+sw t0,0(a0)  | sw t1,0(a1)  ;
+mod:         | fence rw,rw  ;
+j over       | lwu s1,0(a0) ;
+next:        |              ;
+lwu s0,0(a1) |              ;
+over:        |              ;
+exists (0:s0=0 /\ 1:s1=instr:"j over")
