@@ -3,7 +3,10 @@
 3.SB.FFF+fencei+fencei+po          Allow
 CoFF                               Allow
 CoFF+fencei                        Forbid
+CoFF+load-fencei                   Forbid
 CoFR                               Allow
+CoFR+fencei                        Forbid
+CoFR+load-fencei                   Forbid
 CoFW                               Allow
 CoRF                               Allow
 CoRF+fencei                        Forbid
@@ -12,6 +15,7 @@ ISA2.F.FF+fence.w.w+po+po          Allow
 LB.FF                              Allow
 LB.RF+fence.r.w                    Allow
 MP+fence.w.w+fencei                Forbid
+MP+fencei+fence.r.r                Forbid
 MP+patched-fence.r.r               Allow
 MP.F+load+fence.w.w                Forbid
 MP.FF                              Allow
@@ -27,6 +31,7 @@ MP.RF+fence.r.r+fencei             Allow
 MP.RF+fence.w.w+addr-jr            Allow
 MP.RF+fence.w.w+fencei             Forbid
 MP.RF+patched-fence.i              Allow
+MP.WW+irf+fence.r.r                Allow
 SB+fetch-addr+fence.rw.rw          Allow
 SB+fetch-ctrl+fence.rw.rw          Allow
 SB.FF                              Allow
@@ -43,6 +48,7 @@ SM+fencei                          Forbid
 W+F                                Allow
 W+fencei+F                         Allow
 WRC.F.FF                           Allow
+WRC.F.FF+load-fencei+load-fencei   Forbid
 WRC.F.RF+po+fencei                 Allow
 WRC.F.RR+po+fence.r.r              Allow
 WW+FW+fence.w.w+po                 Allow
