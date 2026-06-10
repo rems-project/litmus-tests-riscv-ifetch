@@ -6,6 +6,6 @@ Variant=self
 P0           | P1           ;
 sw t0,0(a1)  | lw s1,(a2)   ;
 mod:         | fence r,r    ;
-li s0, 1     | lw s2,0(a1)  ;
+li s0, 1     | lwu s2,0(a1)  ;
 sw t1,0(a2)  |              ;
 exists (0:s0=2 /\ 1:s1=1 /\ 1:s2=instr:"li s0, 1")

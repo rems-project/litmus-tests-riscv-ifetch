@@ -7,5 +7,5 @@ sw t0,0(a1)  | mod:              ;
              | li t6, 1          ;
              | mv s0, t6         ;
              | fence.i           ;
-             | lw s1, 0(a2)      ;
+             | lwu s1, 0(a2)      ;
 exists (1:s0=2 /\ 1:s1=instr:"li t6, 1")

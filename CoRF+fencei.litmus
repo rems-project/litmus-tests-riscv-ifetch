@@ -3,7 +3,7 @@ Variant=self
 { 0:t0=instr:"li t6, 2"; 0:a1=P1:mod;
   1:a2=P1:mod; }
 P0           | P1                ;
-sw t0,0(a1)  | lw s0, 0(a2)      ;
+sw t0,0(a1)  | lwu s0, 0(a2)      ;
              | fence.i           ;
              | mod:              ;
              | li t6, 1          ;
