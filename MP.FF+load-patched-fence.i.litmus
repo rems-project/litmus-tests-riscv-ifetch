@@ -1,4 +1,4 @@
-RISCV MP.FF+load+patched-fence.i
+RISCV MP.FF+load-patched-fence.i
 Variant=self
 { 0:t0 = instr:"lw s0, 0(a4)"; 0:t1 = instr:"fence.i"; 0:t2 = instr:"nop";
   0:a1 = P1:mod0; 0:a2 = P1:fi_slot; 0:a3 = P1:mod1;

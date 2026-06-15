@@ -15,10 +15,10 @@ interesting/LB.FF.litmus
 interesting/MP+fencei+fence.r.r.litmus
 interesting/MP+fence.w.w+fencei.litmus
 interesting/MP.FF+jump-fencei.litmus
+interesting/MP.FF+patched-fence.i-ctrl.litmus
 interesting/MP.F+load+fence.w.w.litmus
 interesting/MP.FR+fence.w.w+po.litmus
 interesting/MP.RF+fence.w.w+addr-jr.litmus
-interesting/MP.RF+patched-fence.i.litmus
 interesting/MP.WW+irf+fence.r.r.litmus
 interesting/SB+fetch-addr+fence.rw.rw.litmus
 interesting/SB.RF+fence.w.r+po.litmus
@@ -32,8 +32,8 @@ MP.FF+fencei.litmus
 MP.FF.litmus
 MP.FF+load-fencei.litmus
 MP.FF+load-fence.rw.rw.litmus
-MP.FF+load+patched-fence.i.litmus
-MP.FF+lw+fencei.litmus
+MP.FF+load-patched-fence.i.litmus
+MP.FF+lw-fencei.litmus
 MP.FR+fence.w.w+fencei.litmus
 MP+patched-fence.r.r.litmus
 MP.RF+fence.r.r+fencei.litmus

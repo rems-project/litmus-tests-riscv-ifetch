@@ -1,4 +1,4 @@
-RISCV MP.FF+lw+fencei
+RISCV MP.FF+lw-fencei
 Variant=self
 { 0:t0=instr:"nop"; 0:a1=P1:mod0; 0:a2=P1:mod1; 1:a4=z; z=2; }
  P0          | P1            ;
