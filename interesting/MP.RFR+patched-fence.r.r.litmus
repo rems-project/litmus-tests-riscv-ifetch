@@ -1,0 +1,15 @@
+RISCV MP.RFR+patched-fence.r.r
+Variant=self
+{ 0:t0=1; 0:t1=instr:"fence r,r";
+  0:a1=z; 0:a2=P1:frr_slot;
+  1:a1=z; 1:a3=w;
+  1:s7=0; 1:s8=0; 1:s9=0; }
+P0           | P1           ;
+sw t0,0(a1)  |  lw s7,0(a3) ;
+fence w,w    | frr_slot:    ;
+sw t1,0(a2)  |  j end       ;
+             |  li s8, 1    ;
+             | mod:         ;
+             |  lw s9,(a1)  ;
+             | end:         ;
+exists (1:s8=1 /\ 1:s9=0)

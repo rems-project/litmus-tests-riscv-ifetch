@@ -1,0 +1,15 @@
+RISCV MP.FF+jump-load-fencei
+Variant=self
+{ 0:a0=P1:target; 0:t0=instr:"li s0, 3";
+  0:a1=P1:entry;  0:t1=instr:"j fi";
+  1:a4=z; z=2; }
+P0           | P1            ;
+sw t0,0(a0)  | entry:        ;
+fence w,w    |  j end        ;
+sw t1,0(a1)  | fi:           ;
+             |  lw s7,0(a4)  ;
+             |  fence.i      ;
+             | target:       ;
+             |  li s0, 2     ;
+             | end:          ;
+exists (1:s0=2)

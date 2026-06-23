@@ -1,0 +1,13 @@
+RISCV MP.RF+fence.w.w+ctrl-jr
+(* adapted from Brendan's DIC.miniJit01.litmus *)
+Variant=self
+{ [x]=P1:end;
+  0:t0=instr:"li s0, 3"; 0:a1=P1:new; 0:a2=x;
+  1:a2=x; 1:s0=0; }
+P0           | P1           ;
+sw t0,0(a1)  | ld s1,(a2)   ;
+fence w,w    | jr s1        ;
+sd a1,0(a2)  | new:         ;
+             | li s0, 2     ;
+             | end:         ;
+exists (1:s0=2)

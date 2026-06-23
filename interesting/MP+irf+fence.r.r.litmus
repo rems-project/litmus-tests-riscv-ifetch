@@ -1,4 +1,4 @@
-RISCV MP.WW+irf+fence.r.r
+RISCV MP+irf+fence.r.r
 (* adapted from Brendan's DIC.MP.WW+irf.litmus *)
 Variant=self
 { 0:t0=instr:"li s0, 2"; 0:a1=P0:mod; 0:a2=x; 0:t1=1;

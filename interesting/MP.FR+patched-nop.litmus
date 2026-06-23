@@ -1,6 +1,6 @@
-RISCV MP.FR+patched-fence.r.r-ctrl
+RISCV MP.FR+patched-nop
 Variant=self
-{ 0:t0=1; 0:t1=instr:"fence r,r";
+{ 0:t0=1; 0:t1=instr:"nop";
   0:a1=z; 0:a2=P1:frr_slot;
   1:a1=z;
   1:s8=0; 1:s9=0; }

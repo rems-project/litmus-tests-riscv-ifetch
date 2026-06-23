@@ -1,4 +1,4 @@
-RISCV SB+fetch-ctrl+fence.rw.rw
+RISCV SB.F+ctrl+fence.rw.rw
 (* adapted from Brendan's DIC.emailQ3.litmus *)
 Variant=self
 { 0:t0=instr:"j next"; 0:a0=P0:mod; 0:a1=x; 0:s0=99;

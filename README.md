@@ -2,9 +2,9 @@
 
 RISC-V instruction-fetch litmus tests. For each test, the verdict
 line says whether the outcome it looks for can occur (allowed) or
-cannot (forbidden) under four model configurations:
+cannot (forbidden) under five model configurations:
 
-- `default`: the base RISC-V memory model with instruction fetch. A
+- `Ziccif-only`: the base RISC-V memory model with instruction fetch. A
   fetch is ordered before the accesses the fetched instruction
   makes, and `fence.i` orders a hart's earlier data accesses before
   its later fetches.
@@ -23,22 +23,30 @@ cannot (forbidden) under four model configurations:
   ir2 = [I];po;[I]
   ```
 
-- `ir-decode`: an alternative rule under discussion that follows
-  from assuming a hart decodes instructions in program order: each
-  fetch is ordered before the hart's later memory accesses.
+- `ir-decode-w` and `ir-decode` bracket an open question: how far
+  must a fetch be ordered before the hart's own later execution?
+  `ir-decode-w` is the weak end, ordering a fetch only before the
+  hart's later explicit writes.
+
+  ```
+  ir_decode_w = [I];po;[Exp & W]
+  ```
+
+- `ir-decode`: the strong end, the assumption that a hart fully
+  decodes in program order, so a fetch is ordered before all its
+  later memory accesses.
 
   ```
   ir_decode = [I];po;[Exp | (anyW & NExp)]
   ```
 
-  > Alternative weaker variant only to explicit writes (bare minimum)
-
 - `ir3-fetch`: an alternative rule under discussion under which
-  `fence.i` also orders a hart's earlier fetches before its later
-  fetches, not only its earlier data accesses.
+  `fence.i` also orders a hart's earlier fetches, including the
+  fetch of the `fence.i` itself, before its later fetches, not only
+  its earlier data accesses.
 
   ```
-  ir3f = [I];fencerel(Fence.i);[I]
+  ir3f = [I];(po | (iico_data|iico_ctrl)+);[Fence.i];po;[I]
   ```
 
 ### CoFF+fencei
@@ -68,7 +76,7 @@ instruction even after the first has already seen the patched one.
 The `fence.i` does not prevent this: it orders a hart's earlier data
 accesses ahead of its later fetches, not one fetch ahead of another.
 
-`default` allowed | `Ziccid` forbidden | `ir-decode` allowed | `ir3-fetch` forbidden
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` forbidden
 
 #### CoFF (no Fence.i)
 
@@ -101,7 +109,38 @@ load gives the `fence.i` an explicit access to order against, so the
 two fetches can no longer happen out of order. CoFF+fencei, with its
 register-only instruction, leaves the `fence.i` nothing to anchor.
 
-`default` forbidden | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+
+### CoFR
+
+```
+RISCV CoFR
+Variant=self
+{ 0:t0=instr:"li t6, 2"; 0:a1=P1:mod;
+  1:a2=P1:mod; }
+P0           | P1                ;
+sw t0,0(a1)  | mod:              ;
+             | li t6, 1          ;
+             | mv s0, t6         ;
+             | lwu s1, 0(a2)      ;
+exists (1:s0=2 /\ 1:s1=instr:"li t6, 1")
+```
+
+One hart fetches and runs the instruction at `mod`, then reads the
+same address as data further down its program order, while another
+hart patches `mod`. The candidate has the fetch execute the patched
+`li t6, 2` while the later data load returns the original `li t6, 1`,
+so the fetch and the read disagree about one location. The two decode
+rules part ways here: `ir-decode` orders the fetch before every
+po-later access and forbids it, `ir-decode-w` orders it before later
+writes only and leaves this read open. `Ziccid` forbids it too, via
+the data load's own fetch.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
+
+> Should a fetch be ordered before a po-later data read of the same
+> location? In-order decode says yes; the weak variant orders only
+> later writes, so it lets the read overtake the fetch.
 
 ### CoFW
 
@@ -122,9 +161,9 @@ a store later in program order. Without Ziccid, out-of-order fetch is
 permitted, so the fetch can observe that later store instead of the
 instruction originally there.
 
-**`default` allowed !** | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+**`Ziccif-only` allowed !** | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
 
-> This should not be allowed even without Ziccid
+> This should not be allowed even without Ziccid. `ir-decode-w` and `ir-decode` both fix this.
 
 ### ISA2.F+fence.w.w+fence.r.w+fencei
 
@@ -148,9 +187,9 @@ patched code. The fences forbid the weak outcome even without
 Ziccid, because the final hart's flag load sits before its
 `fence.i` and gives it an access to order the fetch against.
 
-`default` forbidden | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
 
-> Without Fence.i this should only be forbidden with `Ziccid`
+> Without Fence.i this would be allowed, even with `Ziccid` as it only orders fetches and not explicit data loads. See ISA2.F+fence.w.w+fence.r.w+po.
 
 ### LB.FF
 
@@ -172,7 +211,7 @@ other hart's. Without Ziccid, out-of-order fetch permits the weak
 outcome, where both fetches pick up the patch the other hart only
 writes afterwards.
 
-**`default` allowed !** | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+**`Ziccif-only` allowed !** | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
 
 > cf. CoFW
 
@@ -196,7 +235,7 @@ one, and that fetch is ordered before its own load, so the two
 reads cannot reorder in any configuration. Here `fence.i` acts as a
 read-read barrier.
 
-`default` forbidden | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
 
 ### MP+fencei+fence.r.r
 
@@ -219,7 +258,28 @@ two stores cannot reorder. The `fence.i` acts as a write-write
 barrier here, and with the reader's `fence r,r` the weak outcome is
 forbidden in every configuration.
 
-`default` forbidden | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+
+### MP+irf+fence.r.r
+
+```
+RISCV MP+irf+fence.r.r
+(* adapted from Brendan's DIC.MP.WW+irf.litmus *)
+Variant=self
+{ 0:t0=instr:"li s0, 2"; 0:a1=P0:mod; 0:a2=x; 0:t1=1;
+  1:a1=P0:mod; 1:a2=x; }
+P0           | P1           ;
+sw t0,0(a1)  | lw s1,(a2)   ;
+mod:         | fence r,r    ;
+li s0, 1     | lwu s2,0(a1)  ;
+sw t1,0(a2)  |              ;
+exists (0:s0=2 /\ 1:s1=1 /\ 1:s2=instr:"li s0, 1")
+```
+
+An MP shape with a basic flag, but the data location is an instruction the writer patches: executed on the writing thread it is up to date (`s0=2`), yet read as data on the reader thread after the flag it is outdated (`li s0, 1`). Any of the rules ordering a fetch before po-later instructions forbids this: Ziccid, `ir-decode-w`, and `ir-decode`. Otherwise out-of-order fetch allows it.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+
 
 ### MP.F+load+fence.w.w
 
@@ -243,96 +303,7 @@ load of z, and the message passed is the writer's store to z. `ir1`
 orders the fetch before that load, so the writer's fence is enough
 to forbid the weak outcome, without fence.i or Ziccid.
 
-`default` forbidden | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
-
-### MP.FF+jump-fencei
-
-```
-RISCV MP.FF+jump-fencei
-(* adapted from Brendan's IDC.miniJit03+fencei.litmus *)
-Variant=self
-{ 0:t0=instr:"li s0, 3"; 0:a1=P1:L1;
-  0:t1=instr:"j Ltarget"; 0:a2=P1:L2;
-  1:s0=0; }
-P0           | P1           ;
-sw t0,0(a1)  | L2:          ;
-fence w,w    | j L0         ;
-sw t1,0(a2)  | L0:          ;
-             | li s0, 1     ;
-             | j Lend       ;
-             | Ltarget:     ;
-             | fence.i      ;
-             | L1:          ;
-             | li s0, 2     ;
-             | Lend:        ;
-exists (1:s0=2)
-```
-
-`default` allowed | `Ziccid` forbidden | `ir-decode` allowed | `ir3-fetch` forbidden
-
-### MP.FF+patched-fence.i-ctrl
-
-```
-RISCV MP.FF+patched-fence.i-ctrl
-Variant=self
-{ 0:t0=instr:"li s9, 1"; 0:t1=instr:"fence.i";
-  0:a1=P1:mod; 0:a2=P1:fi_slot;
-  1:s8=0; 1:s9=0; }
-P0           | P1           ;
-sw t0,0(a1)  | fi_slot:     ;
-fence w,w    |  j end       ;
-sw t1,0(a2)  |  li s8, 1    ;
-             | mod:         ;
-             |  nop         ;
-             | end:         ;
-exists (1:s8=1 /\ 1:s9=0)
-```
-
-`default` allowed | `Ziccid` forbidden | `ir-decode` allowed | **`ir3-fetch` allowed !**
-
-> `ir3-fetch` doesn't order its own fetch w.r.t. `po`-later fetches
-
-### MP.FR+patched-fence.r.r-ctrl
-
-```
-RISCV MP.FR+patched-fence.r.r-ctrl
-Variant=self
-{ 0:t0=1; 0:t1=instr:"fence r,r";
-  0:a1=z; 0:a2=P1:frr_slot;
-  1:a1=z;
-  1:s8=0; 1:s9=0; }
-P0           | P1           ;
-sw t0,0(a1)  | frr_slot:    ;
-fence w,w    |  j end       ;
-sw t1,0(a2)  |  li s8, 1    ;
-             | mod:         ;
-             |  lw s9,(a1)  ;
-             | end:         ;
-exists (1:s8=1 /\ 1:s9=0)
-```
-
-`default` allowed | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
-
-### MP.FR+patched-nop-ctrl
-
-```
-RISCV MP.FR+patched-nop-ctrl
-Variant=self
-{ 0:t0=1; 0:t1=instr:"nop";
-  0:a1=z; 0:a2=P1:frr_slot;
-  1:a1=z;
-  1:s8=0; 1:s9=0; }
-P0           | P1           ;
-sw t0,0(a1)  | frr_slot:    ;
-fence w,w    |  j end       ;
-sw t1,0(a2)  |  li s8, 1    ;
-             | mod:         ;
-             |  lw s9,(a1)  ;
-             | end:         ;
-exists (1:s8=1 /\ 1:s9=0)
-```
-
-`default` allowed | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
 
 ### MP.FR+fence.w.w+po
 
@@ -347,55 +318,56 @@ Variant=self
 exists (1:x10=1 /\ 1:s1=0)
 ```
 
-`default` allowed | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+An MP shape with a fetch used as the flag. Without Ziccid, out-of-order fetch allows this execution. Discriminates `ir-decode-w` from `ir-decode`: the former does not order the flag's fetch before the data read, the latter does.
 
-### MP.RF+fence.w.w+addr-jr
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
+
+### MP.RF+fence.w.w+ctrl-jr
 
 ```
-RISCV MP.RF+fence.w.w+addr-jr
+RISCV MP.RF+fence.w.w+ctrl-jr
 (* adapted from Brendan's DIC.miniJit01.litmus *)
 Variant=self
-{ [x]=P1:L0;
-  0:t0=instr:"li s0, 3"; 0:a1=P1:L1; 0:a2=x;
+{ [x]=P1:end;
+  0:t0=instr:"li s0, 3"; 0:a1=P1:new; 0:a2=x;
   1:a2=x; 1:s0=0; }
 P0           | P1           ;
 sw t0,0(a1)  | ld s1,(a2)   ;
 fence w,w    | jr s1        ;
-sd a1,0(a2)  | L0:          ;
-             | li s0, 1     ;
-             | j Lend       ;
-             | L1:          ;
+sd a1,0(a2)  | new:         ;
              | li s0, 2     ;
-             | Lend:        ;
+             | end:         ;
 exists (1:s0=2)
 ```
 
-`default` allowed | `Ziccid` allowed | `ir-decode` allowed | `ir3-fetch` allowed
+An MP shape where P0 writes an instruction as data at the `new` label, then as the flag writes the `new` label itself. The reader loads the label and `jr`s through it, so the flag induces a control dependency into the fetch at `new`. This is permitted in all models, including Ziccid: no model orders the fetch behind that dependency, so the new label is consumed yet stale bytes are fetched.
 
-### MP.WW+irf+fence.r.r
+`Ziccif-only` allowed | `Ziccid` allowed | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` allowed
+
+### MP.RF+fencei-fence.w.w+fence.r.r
 
 ```
-RISCV MP.WW+irf+fence.r.r
-(* adapted from Brendan's DIC.MP.WW+irf.litmus *)
+RISCV MP.RF+fencei-fence.w.w+fence.r.r
 Variant=self
-{ 0:t0=instr:"li s0, 2"; 0:a1=P0:mod; 0:a2=x; 0:t1=1;
-  1:a1=P0:mod; 1:a2=x; }
-P0           | P1           ;
-sw t0,0(a1)  | lw s1,(a2)   ;
-mod:         | fence r,r    ;
-li s0, 1     | lwu s2,0(a1)  ;
-sw t1,0(a2)  |              ;
-exists (0:s0=2 /\ 1:s1=1 /\ 1:s2=instr:"li s0, 1")
+{ 0:t0=instr:"lw s0, 0(a4)"; 0:a1=P1:mod; 0:a2=f; 0:t1=1;
+  1:a2=f; 1:a3=x; 1:a4=y; 1:s0=0;
+  x=1; y=2; }
+P0           | P1            ;
+sw t0,0(a1)  | lw s1,0(a2)   ;
+fence.i      | fence r,r     ;
+fence w,w    | mod:          ;
+sw t1,0(a2)  | lw s0,0(a3)   ;
+exists (1:s1=1 /\ 1:s0=1)
 ```
 
-`default` allowed | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+An MP shape where the data is an instruction the reader fetches. In a regular data MP, the barriers here (writer `fence w,w`, reader `fence r,r`) would suffice to forbid the stale read. Here they do not, and in particular the writer's `fence.i` has no impact on another thread: the reader still fetches the stale `mod`. Allowed in all models.
 
-> We probably want `1:s1=2` in the condition?
+`Ziccif-only` allowed | `Ziccid` allowed | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` allowed
 
-### SB+fetch-addr+fence.rw.rw
+### SB.F+addr+fence.rw.rw
 
 ```
-RISCV SB+fetch-addr+fence.rw.rw
+RISCV SB.F+addr+fence.rw.rw
 (* adapted from Brendan's DIC.emailQ2.litmus *)
 Variant=self
 { 0:t0=instr:"mv a1, a2"; 0:a0=P0:mod; 0:a1=y; 0:a2=x;
@@ -408,7 +380,9 @@ lwu s0,0(a1) |              ;
 exists (0:a1=x /\ 0:s0=0 /\ 1:s1=instr:"nop")
 ```
 
-`default` allowed | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+A store-buffering shape where P1 is a regular SB participant (store `x`, `fence rw,rw`, read `mod`), and P0 patches its own po-later instruction, sitting before P0's read, with an address dependency into it. The patch rewrites `mod` from `nop` to `mv a1, a2`, redirecting `a1`, the address P0 then reads, from `y` to `x`. Using the value the patched instruction produced does not order the patch store before that read: P0 reads `x` stale (`s0=0`) while P1's data read of `mod` still sees the old `nop`, the SB outcome. Where fetches are ordered before po-later reads this is forbidden (Ziccid and `ir-decode`); otherwise it is allowed.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
 
 ### SB.RF+fence.w.r+po
 
@@ -424,7 +398,9 @@ lw s1,(a2)   | li s0, 1     ;
 exists (0:s1=0 /\ 1:s0=1)
 ```
 
-`default` allowed | `Ziccid` allowed | `ir-decode` allowed | `ir3-fetch` allowed
+An SB shape where P0's store patches an instruction that P1 fetches in place of its load. P0 patches `mod`, `fence w,r`, then reads `x`; P1 stores `x`, then fetches `mod`. The candidate has both sides stale: P0 reads `x=0` and P1 fetches the old `mod` (`s0=1`). Allowed in all models: nothing, not even Ziccid, orders a hart's store before its own po-later fetch. A `fence.i` on P1 forbids it, ordering that store before the fetch.
+
+`Ziccif-only` allowed | `Ziccid` allowed | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` allowed
 
 ### SM+RW
 
@@ -443,7 +419,11 @@ li s0, 1     | add a3,a2,t2     ;
 exists (0:s1=1 /\ 1:s2=instr:"li s0, 2" /\ 1:s3=instr:"li s0, 3" /\ 0:s0=2)
 ```
 
-`default` allowed | `Ziccid` allowed | `ir-decode` allowed | `ir3-fetch` allowed
+![SM+RW candidate execution](diagrams/SM+RW.png)
+
+P0 writes the instruction at `mod`, which P1 observes and then overwrites. After re-reading its own overwrite, P1 writes a flag through an address dependency. P0 reads the flag, `fence.i`s, and fetches `mod`, which is still P0's own initial write. This is allowed in all models: P1's re-read can be forwarded from its store buffer (`rfi`) rather than reading the overwrite globally, so the overwrite need not propagate, and the address-dependent flag can be set without it. The forwarding link `rfi;addr` is not a global edge, so the cycle stays open.
+
+`Ziccif-only` allowed | `Ziccid` allowed | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` allowed
 
 ### SM+RW+RW
 
@@ -462,21 +442,11 @@ li s0, 1     |              |                  ;
 exists (0:s1=1 /\ 1:s2=instr:"li s0, 2" /\ 2:s3=instr:"li s0, 3" /\ 0:s0=2)
 ```
 
-`default` forbidden | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+![SM+RW+RW rejected candidate](diagrams/SM+RW+RW.png)
 
-### W+fencei+F
+P1's observe-overwrite-republish role from SM+RW is split here: P1 overwrites, but P2 does the re-read and the address-dependent flag write. With the re-read on a separate hart there is no store buffer to forward from, so it reads P1's overwrite globally (`rfe`) and the flag is ordered after it (`rfe;addr`). P0 seeing the flag then implies the overwrite is visible to its fetch, so it is forbidden in all models. This witnesses multi-copy atomicity of instruction writes: a store observed by one hart through the memory system is observed by all.
 
-```
-RISCV W+fencei+F
-Variant=self
-{ 0:t0=instr:"li s0, 1"; 0:a1=P1:mod; 1:s0=0; }
-P0           | P1           ;
-sw t0,0(a1)  | mod:         ;
-fence.i      | nop          ;
-exists 1:s0=0
-```
-
-`default` allowed | `Ziccid` allowed | `ir-decode` allowed | `ir3-fetch` allowed
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
 
 ### WRC.F.RF+po+fencei
 
@@ -497,4 +467,213 @@ end:         |             |             ;
 exists (1:s0=1 /\ 2:s2=1 /\ 2:s0=0)
 ```
 
-`default` allowed | `Ziccid` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` allowed
+
+---
+## MP.FF with a patched jump as flag
+
+MP-shape tests where P1 enters freshly-patched code through a jump. P0 writes the `target` body, `fence w,w`, then publishes by patching P1's `entry` jump to land in it. The flag P1 observes is the jump itself, so its fetch is register-only; the candidate is P1 taking the new entry jump but fetching a stale `target`. The variants differ in what sits between the two fetches: nothing, a `fence.i`, or a `fence.i` anchored by an explicit access.
+
+### MP.FF+jump
+
+```
+RISCV MP.FF+jump
+(* adapted from Brendan's DIC.miniJit03.litmus *)
+Variant=self
+{ 0:a0=P1:target; 0:t0=instr:"li s0, 3";
+  0:a1=P1:entry;  0:t1=instr:"j target";
+  1:s0=0; }
+P0           | P1           ;
+sw t0,0(a0)  | entry:       ;
+fence w,w    |  j end       ;
+sw t1,0(a1)  | target:      ;
+             |  li s0, 2    ;
+             | end:         ;
+exists (1:s0=2)
+```
+
+MP shape with the flag itself a fetch. Out-of-order fetch allows the weak execution in every tier but Ziccid.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` allowed
+
+### MP.FF+jump-fencei
+
+```
+RISCV MP.FF+jump-fencei
+(* adapted from Brendan's IDC.miniJit03+fencei.litmus *)
+Variant=self
+{ 0:a0=P1:target; 0:t0=instr:"li s0, 3";
+  0:a1=P1:entry;  0:t1=instr:"j fi";
+  1:s0=0; }
+P0           | P1           ;
+sw t0,0(a0)  | entry:       ;
+fence w,w    |  j end       ;
+sw t1,0(a1)  | fi:          ;
+             |  fence.i     ;
+             | target:      ;
+             |  li s0, 2    ;
+             | end:         ;
+exists (1:s0=2)
+```
+
+A `fence.i` at the jump target does not close it: the patched code is a load-immediate, not an explicit memory event, so the `fence.i` has nothing to anchor. Still allowed outside Ziccid and the corrected `ir3-fetch`, which closes it instead by ordering the `fence.i`'s own fetch before the later fetch.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` forbidden
+
+### MP.FF+jump-load-fencei
+
+```
+RISCV MP.FF+jump-load-fencei
+Variant=self
+{ 0:a0=P1:target; 0:t0=instr:"li s0, 3";
+  0:a1=P1:entry;  0:t1=instr:"j fi";
+  1:a4=z; z=2; }
+P0           | P1            ;
+sw t0,0(a0)  | entry:        ;
+fence w,w    |  j end        ;
+sw t1,0(a1)  | fi:           ;
+             |  lw s7,0(a4)  ;
+             |  fence.i      ;
+             | target:       ;
+             |  li s0, 2     ;
+             | end:          ;
+exists (1:s0=2)
+```
+
+The same idiom with a load fetched before the `fence.i`. The load anchors the `fence.i`, but the flag is the register-only entry jump, so Ziccif-only has no edge from the flag fetch to the load and stays allowed. In-order decode supplies that edge and closes it; `ir-decode-w` does not, as the anchor is a read, not a write.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` forbidden
+
+### MP.FF+jump-store-fencei
+
+```
+RISCV MP.FF+jump-store-fencei
+Variant=self
+{ 0:a0=P1:target; 0:t0=instr:"li s0, 3";
+  0:a1=P1:entry;  0:t1=instr:"j fi";
+  1:a4=z; 1:s7=5; }
+P0           | P1            ;
+sw t0,0(a0)  | entry:        ;
+fence w,w    |  j end        ;
+sw t1,0(a1)  | fi:           ;
+             |  sw s7,0(a4)  ;
+             |  fence.i      ;
+             | target:       ;
+             |  li s0, 2     ;
+             | end:          ;
+exists (1:s0=2)
+```
+
+As the load variant, but the anchor is a store. `ir-decode-w` now closes it too: its fetch-before-later-writes edge reaches the store. Default still allows (the flag is the jump). The load/store pair pins the `ir-decode-w` vs `ir-decode` boundary.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
+
+## MP with a patched fence as flag
+
+A family of MP-shape tests where the flag is a written fence
+(`fence r,r`, `fence.i`, or a `nop` as control) being fetched, rather
+than a data value.
+
+### MP.RFR+patched-fence.r.r
+
+```
+RISCV MP.RFR+patched-fence.r.r
+Variant=self
+{ 0:t0=1; 0:t1=instr:"fence r,r";
+  0:a1=z; 0:a2=P1:frr_slot;
+  1:a1=z; 1:a3=w;
+  1:s7=0; 1:s8=0; 1:s9=0; }
+P0           | P1           ;
+sw t0,0(a1)  |  lw s7,0(a3) ;
+fence w,w    | frr_slot:    ;
+sw t1,0(a2)  |  j end       ;
+             |  li s8, 1    ;
+             | mod:         ;
+             |  lw s9,(a1)  ;
+             | end:         ;
+exists (1:s8=1 /\ 1:s9=0)
+```
+
+A read precedes the slot, so the fetched `fence r,r` orders the later
+read after po-previous reads, not after its own fetch. Is that right?
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
+
+### MP.FR+patched-fence.r.r
+
+```
+RISCV MP.FR+patched-fence.r.r
+Variant=self
+{ 0:t0=1; 0:t1=instr:"fence r,r";
+  0:a1=z; 0:a2=P1:frr_slot;
+  1:a1=z;
+  1:s8=0; 1:s9=0; }
+P0           | P1           ;
+sw t0,0(a1)  | frr_slot:    ;
+fence w,w    |  j end       ;
+sw t1,0(a2)  |  li s8, 1    ;
+             | mod:         ;
+             |  lw s9,(a1)  ;
+             | end:         ;
+exists (1:s8=1 /\ 1:s9=0)
+```
+
+If the previous were forbidden, would it still be forbidden here, where
+no read precedes the fence?
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
+
+### MP.FR+patched-nop
+
+```
+RISCV MP.FR+patched-nop
+Variant=self
+{ 0:t0=1; 0:t1=instr:"nop";
+  0:a1=z; 0:a2=P1:frr_slot;
+  1:a1=z;
+  1:s8=0; 1:s9=0; }
+P0           | P1           ;
+sw t0,0(a1)  | frr_slot:    ;
+fence w,w    |  j end       ;
+sw t1,0(a2)  |  li s8, 1    ;
+             | mod:         ;
+             |  lw s9,(a1)  ;
+             | end:         ;
+exists (1:s8=1 /\ 1:s9=0)
+```
+
+If the previous were forbidden, would it still be forbidden here, where
+the slot is a `nop`? This asks whether ordering holds from the point we
+confirm whether a fence was fetched, even if ultimately no fence was
+fetched.
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
+
+### MP.FF+patched-fence.i
+
+```
+RISCV MP.FF+patched-fence.i
+Variant=self
+{ 0:t0=instr:"li s9, 1"; 0:t1=instr:"fence.i";
+  0:a1=P1:mod; 0:a2=P1:fi_slot;
+  1:s8=0; 1:s9=0; }
+P0           | P1           ;
+sw t0,0(a1)  | fi_slot:     ;
+fence w,w    |  j end       ;
+sw t1,0(a2)  |  li s8, 1    ;
+             | mod:         ;
+             |  nop         ;
+             | end:         ;
+exists (1:s8=1 /\ 1:s9=0)
+```
+
+The flag is a fetched `fence.i` and the data is another fetch. This
+should probably still order with no preceding explicit memory access.
+The `fence.i` should also order subsequent fetches after its own fetch
+(cf. `ir3-fetch`).
+
+`Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` forbidden
+
+## Missing:
+- IDC.Fetchtoexecute_chained.litmus
+- DCC2

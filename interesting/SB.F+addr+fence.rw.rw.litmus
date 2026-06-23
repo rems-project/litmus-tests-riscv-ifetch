@@ -1,4 +1,4 @@
-RISCV SB+fetch-addr+fence.rw.rw
+RISCV SB.F+addr+fence.rw.rw
 (* adapted from Brendan's DIC.emailQ2.litmus *)
 Variant=self
 { 0:t0=instr:"mv a1, a2"; 0:a0=P0:mod; 0:a1=y; 0:a2=x;
