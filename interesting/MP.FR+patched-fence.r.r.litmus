@@ -6,9 +6,6 @@ Variant=self
   1:s8=0; 1:s9=0; }
 P0           | P1           ;
 sw t0,0(a1)  | frr_slot:    ;
-fence w,w    |  j end       ;
-sw t1,0(a2)  |  li s8, 1    ;
-             | mod:         ;
-             |  lw s9,(a1)  ;
-             | end:         ;
-exists (1:s8=1 /\ 1:s9=0)
+fence w,w    |  li s8, 1    ;
+sw t1,0(a2)  |  lw s9,(a1)  ;
+exists (1:s8=0 /\ 1:s9=0)

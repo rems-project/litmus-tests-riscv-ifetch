@@ -1,4 +1,4 @@
-RISCV MP.F+load+fence.w.w
+RISCV MP.F+fence.w.w+patched-load
 (* adapted from Brendan's DIC.fetchtoexecute.litmus *)
 Variant=self
 { 0:t0=instr:"lw s0, 0(a2)"; 0:a1=P1:mod; 0:a2=z; 0:t1=1;

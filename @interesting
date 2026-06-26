@@ -11,12 +11,12 @@ interesting/MP.FF+jump-load-fencei.litmus
 interesting/MP.FF+jump-store-fencei.litmus
 interesting/MP.FF+jump.litmus
 interesting/MP.FF+patched-fence.i.litmus
-interesting/MP.F+load+fence.w.w.litmus
+interesting/MP.F+fence.w.w+patched-load.litmus
+interesting/MP.FR+fence.w.w+reg-addr.litmus
+interesting/MP.FR+fence.w.w+load-addr.litmus
 interesting/MP.FR+fence.w.w+po.litmus
 interesting/MP.FR+patched-fence.r.r.litmus
-interesting/MP.FR+patched-nop.litmus
 interesting/MP.RF+fence.w.w+ctrl-jr.litmus
-interesting/MP.RFR+patched-fence.r.r.litmus
 interesting/MP+irf+fence.r.r.litmus
 interesting/SB.F+addr+fence.rw.rw.litmus
 interesting/SB.RF+fence.w.r+po.litmus
