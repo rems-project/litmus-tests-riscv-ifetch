@@ -34,7 +34,7 @@ MP.FR+fence.w.w+reg-addr                  Forbid
 MP.FR+fence.w.w+load-addr             Forbid
 MP.FR+fence.w.w+po                    Forbid
 MP.FR+patched-fence.r.r               Forbid
-MP+patched-fence.r.r                  Allow
+MP.RFR+patched-fence.r.r              Forbid
 MP.RF+fence.r.r+fencei                Allow
 MP.RF+fence.w.w+ctrl-jr               Allow
 MP.RF+fence.w.w+fencei                Forbid

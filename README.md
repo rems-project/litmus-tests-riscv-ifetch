@@ -224,9 +224,8 @@ Variant=self
 P0           | P1                ;
 sw t0,0(a1)  | mod:              ;
              | li t6, 1          ;
-             | mv s0, t6         ;
              | lwu s1, 0(a2)      ;
-exists (1:s0=2 /\ 1:s1=instr:"li t6, 1")
+exists (1:t6=2 /\ 1:s1=instr:"li t6, 1")
 ```
 
 One hart fetches and runs the instruction at `mod`, then reads the
@@ -559,7 +558,7 @@ sw t1,0(a1)  | target:      ;
 exists (1:s0=2)
 ```
 
-MP shape with the flag itself a fetch. Out-of-order fetch allows the weak execution in every tier but Ziccid.
+MP shape with the flag itself a fetch. Out-of-order fetch allows the weak execution in every model version but Ziccid.
 
 `Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` allowed | `ir3-fetch` allowed
 
@@ -637,9 +636,10 @@ As the load variant, but the anchor is a store. `ir-decode-w` now closes it too:
 
 ## MP with a patched fence as flag
 
-Two MP-shape tests where the patched-in, fetched instruction is itself a
-fence: a `fence r,r` (which here orders nothing) and a `fence.i` (which
-orders later fetches).
+Three MP-shape tests where the patched-in, fetched instruction is itself a
+fence. A `fence r,r` orders nothing with no po-earlier read (the FR shape)
+but orders the pair when one is present (the RFR shape); a `fence.i` orders
+later fetches.
 
 ### MP.FR+patched-fence.r.r
 
@@ -660,10 +660,44 @@ exists (1:s8=0 /\ 1:s9=0)
 P0 writes z, then patches P1's `frr_slot` from `li s8, 1` into `fence r,r`
 (so `s8=0` witnesses the fetch saw the fence). The fetched fence has no
 po-earlier read to order against, so it orders nothing and the later read
-of z is still stale. A lightweight fence is right here; a heavyweight
-barrier whose later instructions had to await its commit would forbid it.
+of z is still stale. An ordering fence is right here; a completion fence,
+whose later instructions would have to wait for it to complete, would forbid it.
 
 `Ziccif-only` allowed | `Ziccid` forbidden | `ir-decode-w` allowed | `ir-decode` forbidden | `ir3-fetch` allowed
+
+### MP.RFR+patched-fence.r.r
+
+```
+RISCV MP.RFR+patched-fence.r.r
+Variant=self
+{
+ 0:t0 = instr:"fence r,r";
+ 0:a1 = P1:Lmod;
+ 0:a2 = x; 0:t1 = 1;
+ 0:a3 = y; 0:t2 = 1;
+ 1:a1 = y; 1:a2 = x; 1:s1 = 0;
+}
+P0           | P1           ;
+sw t1,0(a2)  | lw s0,(a1)   ;
+fence w,w    | Lmod:        ;
+sw t0,0(a1)  |  li s1, 1    ;
+fence w,w    | lw s2,(a2)   ;
+sw t2,0(a3)  |              ;
+exists (1:s0=1 /\ 1:s1=0 /\ 1:s2=0)
+```
+
+The same patched `fence r,r`, but now with a po-earlier read for it to order.
+P0 publishes `x`, then behind two `fence w,w` patches `Lmod` to `fence r,r`
+and writes the flag `y`. P1 reads `y` (`s0`), fetches the patched fence
+(`s1=0` witnesses it ran the fence, not the original `li s1, 1`), then reads
+`x` (`s2`). With a po-earlier read to order, the fetched `fence r,r` orders
+`lw y` before `lw x`, so the stale read is forbidden in every model version.
+This is the positive control to `MP.FR+patched-fence.r.r`: together they show
+the fetched fence is an ordering fence, which orders a preceding read but does
+nothing without one. A completion fence would instead forbid the `MP.FR` shape
+too, by making its later read wait for the fence to complete.
+
+`Ziccif-only` forbidden | `Ziccid` forbidden | `ir-decode-w` forbidden | `ir-decode` forbidden | `ir3-fetch` forbidden
 
 ### MP.FF+patched-fence.i
 

@@ -24,3 +24,4 @@ interesting/SM+RW.litmus
 interesting/SM+RW+RW.litmus
 interesting/MP.RF+fencei-fence.w.w+fence.r.r.litmus
 interesting/WRC.F.RF+po+fencei.litmus
+interesting/MP.RFR+patched-fence.r.r.litmus

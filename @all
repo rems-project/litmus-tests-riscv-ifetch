@@ -42,7 +42,7 @@ MP.FF+load-fence.rw.rw.litmus
 MP.FF+load-patched-fence.i.litmus
 MP.FF+lw-fencei.litmus
 MP.FR+fence.w.w+fencei.litmus
-MP+patched-fence.r.r.litmus
+interesting/MP.RFR+patched-fence.r.r.litmus
 MP.RF+fence.r.r+fencei.litmus
 MP.RF+fence.w.w+fencei.litmus
 MP+irf+data+fence.r.r.litmus
